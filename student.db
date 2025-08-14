@@ -1,0 +1,111 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <mysql/mysql.h>
+
+void connect_db(MYSQL *conn) {
+    if (!mysql_real_connect(conn, "localhost", "root", "your_password", "studentdb", 0, NULL, 0)) {
+        fprintf(stderr, "Connection failed: %s\n", mysql_error(conn));
+        exit(1);
+    }
+}
+
+void create_student(MYSQL *conn) {
+    int roll_no;
+    char name[50];
+    float marks;
+
+    printf("Enter roll number: ");
+    scanf("%d", &roll_no);
+    printf("Enter name: ");
+    scanf(" %[^\n]", name);
+    printf("Enter marks: ");
+    scanf("%f", &marks);
+
+    char query[256];
+    sprintf(query, "INSERT INTO students (roll_no, name, marks) VALUES (%d, '%s', %.2f)", roll_no, name, marks);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Insert failed: %s\n", mysql_error(conn));
+    } else {
+        printf("Student record created successfully.\n");
+    }
+}
+
+void read_students(MYSQL *conn) {
+    if (mysql_query(conn, "SELECT * FROM students")) {
+        fprintf(stderr, "Query failed: %s\n", mysql_error(conn));
+        return;
+    }
+
+    MYSQL_RES *res = mysql_store_result(conn);
+    MYSQL_ROW row;
+
+    printf("\nRoll No\tName\t\tMarks\n");
+    printf("-------\t----\t\t-----\n");
+
+    while ((row = mysql_fetch_row(res))) {
+        printf("%s\t%-10s\t%s\n", row[0], row[1], row[2]);
+    }
+
+    mysql_free_result(res);
+}
+
+void update_student(MYSQL *conn) {
+    int roll_no;
+    float marks;
+
+    printf("Enter roll number to update: ");
+    scanf("%d", &roll_no);
+    printf("Enter new marks: ");
+    scanf("%f", &marks);
+
+    char query[256];
+    sprintf(query, "UPDATE students SET marks = %.2f WHERE roll_no = %d", marks, roll_no);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Update failed: %s\n", mysql_error(conn));
+    } else {
+        printf("Record updated successfully.\n");
+    }
+}
+
+void delete_student(MYSQL *conn) {
+    int roll_no;
+    printf("Enter roll number to delete: ");
+    scanf("%d", &roll_no);
+
+    char query[128];
+    sprintf(query, "DELETE FROM students WHERE roll_no = %d", roll_no);
+
+    if (mysql_query(conn, query)) {
+        fprintf(stderr, "Delete failed: %s\n", mysql_error(conn));
+    } else {
+        printf("Record deleted successfully.\n");
+    }
+}
+
+int main() {
+    MYSQL *conn = mysql_init(NULL);
+    connect_db(conn);
+
+    int choice;
+    do {
+        printf("\n--- Student Database Menu ---\n");
+        printf("1. Add Student\n2. View Students\n3. Update Marks\n4. Delete Student\n5. Exit\n");
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+
+        switch (choice) {
+            case 1: create_student(conn); break;
+            case 2: read_students(conn); break;
+            case 3: update_student(conn); break;
+            case 4: delete_student(conn); break;
+            case 5: printf("Exiting...\n"); break;
+            default: printf("Invalid choice.\n");
+        }
+    } while (choice != 5);
+
+    mysql_close(conn);
+    return 0;
+}
